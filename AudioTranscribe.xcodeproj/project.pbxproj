@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		8644F6AA2E1A15CF00F0702C /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 8644F6A92E1A15CF00F0702C /* Secrets.plist */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		862CC9442E19A30A0047283E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,6 +33,7 @@
 		862CC94D2E19A30A0047283E /* AudioTranscribeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AudioTranscribeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		862CC9AF2E19B6560047283E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8644F6612E1A11D300F0702C /* AudioTranscribe.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = AudioTranscribe.xcodeproj; sourceTree = "<group>"; };
+		8644F6A92E1A15CF00F0702C /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.plist; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -77,6 +82,7 @@
 		862CC92D2E19A3080047283E = {
 			isa = PBXGroup;
 			children = (
+				8644F6A92E1A15CF00F0702C /* Secrets.plist */,
 				862CC9AF2E19B6560047283E /* Info.plist */,
 				862CC9382E19A3080047283E /* AudioTranscribe */,
 				862CC9462E19A30A0047283E /* AudioTranscribeTests */,
@@ -228,6 +234,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8644F6AA2E1A15CF00F0702C /* Secrets.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
