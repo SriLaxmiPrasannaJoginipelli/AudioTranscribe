@@ -12,6 +12,7 @@ enum TranscriptionError: LocalizedError {
     case networkError(String)
     case decodeError
     case fallbackUnavailable
+    case invalidFile
 
     var errorDescription: String? {
         switch self {
@@ -23,6 +24,8 @@ enum TranscriptionError: LocalizedError {
             return "Could not parse Whisper API response."
         case .fallbackUnavailable:
             return "Fallback transcription service is currently unavailable."
+        case .invalidFile:
+            return "Invalid audio file."
         }
     }
 }

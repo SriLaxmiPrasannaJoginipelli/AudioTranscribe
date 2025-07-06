@@ -28,41 +28,15 @@ class TranscriptionService {
 
     private let endpoint = URL(string: "https://api.openai.com/v1/audio/transcriptions")!
     
-//    func transcribeAudio(fileURL: URL, languageCode: String) async throws -> String {
-//        var request = URLRequest(url: endpoint)
-//        request.httpMethod = "POST"
-//        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-//
-//        let boundary = UUID().uuidString
-//        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
-//
-//        let body = try createFormData(fileURL: fileURL, boundary: boundary, languageCode: languageCode)
-//        let (data, response) = try await URLSession.shared.upload(for: request, from: body)
-//
-//        guard let httpResponse = response as? HTTPURLResponse else {
-//            throw TranscriptionError.networkError("No HTTP response")
-//        }
-//
-//        guard (200..<300).contains(httpResponse.statusCode) else {
-//            let errorMessage = String(data: data, encoding: .utf8) ?? "Unknown error"
-//            if httpResponse.statusCode == 429 {
-//                throw TranscriptionError.quotaExceeded
-//            } else {
-//                throw TranscriptionError.networkError(errorMessage)
-//            }
-//        }
-//
-//        do {
-//            let decoded = try JSONDecoder().decode(WhisperTranscriptionResponse.self, from: data)
-//            return decoded.text
-//        } catch {
-//            throw TranscriptionError.decodeError
-//        }
-//    }
-
     func transcribeAudio(fileURL: URL, languageCode: String) async throws -> String {
         var delay: TimeInterval = 1
         var lastError: Error?
+        
+        let asset = AVAsset(url: fileURL)
+        guard asset.isPlayable else {
+            print("Corrupt or invalid audio asset")
+            throw TranscriptionError.invalidFile
+        }
         
         for attempt in 1...6 {  // 5 retries, fallback on 6th
             do {
