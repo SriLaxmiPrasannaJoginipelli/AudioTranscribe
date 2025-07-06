@@ -62,8 +62,12 @@ class TranscriptionService {
         let fileData = try Data(contentsOf: fileURL)
 
         data.append("--\(boundary)\r\n".data(using: .utf8)!)
-        data.append("Content-Disposition: form-data; name=\"file\"; filename=\"segment.m4a\"\r\n".data(using: .utf8)!)
-        data.append("Content-Type: audio/m4a\r\n\r\n".data(using: .utf8)!)
+        let filename = fileURL.lastPathComponent
+        let mimeType = "audio/m4a" 
+
+        data.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        data.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+
         data.append(fileData)
         data.append("\r\n".data(using: .utf8)!)
 

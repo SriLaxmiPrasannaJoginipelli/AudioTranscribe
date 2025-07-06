@@ -18,11 +18,9 @@ final class AudioRecorderService: NSObject, ObservableObject {
     private var audioEngine: AVAudioEngine!
     private var mixerNode: AVAudioMixerNode!
     private var file: AVAudioFile?
-    private var timer: Timer?
-
     private let segmentDuration: TimeInterval = 30
     private(set) var recordingURL: URL?
-    
+
     @Published var isRecording = false
     weak var delegate: AudioRecorderDelegate?
 
@@ -36,21 +34,24 @@ final class AudioRecorderService: NSObject, ObservableObject {
     // MARK: - Recording Control
 
     func startRecording() throws {
-        stopRecording() // ensure fresh session
+        stopRecording()
 
         audioEngine = AVAudioEngine()
         mixerNode = AVAudioMixerNode()
 
-        let format = audioEngine.inputNode.outputFormat(forBus: 0)
+        let inputFormat = audioEngine.inputNode.outputFormat(forBus: 0)
         audioEngine.attach(mixerNode)
-        audioEngine.connect(audioEngine.inputNode, to: mixerNode, format: format)
+        audioEngine.connect(audioEngine.inputNode, to: mixerNode, format: inputFormat)
+
+        print("Using audio format: \(inputFormat)")
 
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("recording-\(UUID().uuidString.prefix(6)).m4a")
+            .appendingPathComponent("recording-\(UUID().uuidString.prefix(6)).caf")
         recordingURL = url
-        file = try AVAudioFile(forWriting: url, settings: format.settings)
 
-        mixerNode.installTap(onBus: 0, bufferSize: 1024, format: format) { [weak self] buffer, _ in
+        file = try AVAudioFile(forWriting: url, settings: inputFormat.settings)
+
+        mixerNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, _ in
             try? self?.file?.write(from: buffer)
         }
 
@@ -64,33 +65,34 @@ final class AudioRecorderService: NSObject, ObservableObject {
 
     func stopRecording() {
         audioEngine?.stop()
-        audioEngine?.inputNode.removeTap(onBus: 0)
+        mixerNode?.removeTap(onBus: 0)
         try? AVAudioSession.sharedInstance().setActive(false)
 
         DispatchQueue.main.async {
             self.isRecording = false
         }
 
-        guard let url = recordingURL else { return }
+        guard let rawURL = recordingURL else { return }
 
         Task {
-            let duration = try await getAudioDuration(url: url)
+            do {
+                let cleanURL = try await reencodeToM4A(rawURL)
+                let duration = try await getAudioDuration(url: cleanURL)
 
-            if duration < segmentDuration {
-                await MainActor.run {
-                    self.delegate?.didFinishSegment(url)
-                }
-            } else {
-                do {
-                    let segments = try await segmentAudioFile(url)
+                if duration < segmentDuration {
+                    await MainActor.run {
+                        self.delegate?.didFinishSegment(cleanURL)
+                    }
+                } else {
+                    let segments = try await segmentAudioFile(cleanURL)
                     for segment in segments {
                         await MainActor.run {
                             self.delegate?.didFinishSegment(segment)
                         }
                     }
-                } catch {
-                    print("Segmenting failed: \(error)")
                 }
+            } catch {
+                print("Finalization failed: \(error.localizedDescription)")
             }
         }
     }
@@ -99,21 +101,22 @@ final class AudioRecorderService: NSObject, ObservableObject {
 
     func segmentAudioFile(_ url: URL) async throws -> [URL] {
         let duration = try await getAudioDuration(url: url)
-        var segmentURLs: [URL] = []
-        var startTime = 0.0
+        var segments: [URL] = []
+        var start: Double = 0
 
-        while startTime < duration {
-            let endTime = min(startTime + segmentDuration, duration)
+        while start < duration {
+            let end = min(start + segmentDuration, duration)
             let segmentURL = FileManager.default.temporaryDirectory
                 .appendingPathComponent("segment-\(UUID().uuidString.prefix(6)).m4a")
 
-            try await trimAudio(sourceURL: url, start: startTime, end: endTime, destinationURL: segmentURL)
-            segmentURLs.append(segmentURL)
-            startTime = endTime
+            try await trimAudio(sourceURL: url, start: start, end: end, destinationURL: segmentURL)
+            segments.append(segmentURL)
+            start = end
         }
 
-        return segmentURLs
+        return segments
     }
+
     func trimAudio(sourceURL: URL, start: Double, end: Double, destinationURL: URL) async throws {
         let asset = AVAsset(url: sourceURL)
         guard let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
@@ -136,19 +139,45 @@ final class AudioRecorderService: NSObject, ObservableObject {
                 }
             }
         }
+
     }
 
+    // MARK: - Utility
 
     func getAudioDuration(url: URL) async throws -> Double {
         let asset = AVAsset(url: url)
         return CMTimeGetSeconds(asset.duration)
     }
 
+    private func reencodeToM4A(_ inputURL: URL) async throws -> URL {
+        let asset = AVAsset(url: inputURL)
+        guard let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
+            throw NSError(domain: "Reencode", code: -2, userInfo: [NSLocalizedDescriptionKey: "Failed to create export session."])
+        }
+
+        let outputURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cleaned-\(UUID().uuidString.prefix(6)).m4a")
+
+        exporter.outputURL = outputURL
+        exporter.outputFileType = .m4a
+        exporter.timeRange = CMTimeRange(start: .zero, duration: asset.duration)
+
+        return try await withCheckedThrowingContinuation { continuation in
+            exporter.exportAsynchronously {
+                if let error = exporter.error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: outputURL)
+                }
+            }
+        }
+    }
+
     // MARK: - Audio Session
 
     private func configureAudioSession() throws {
         let session = AVAudioSession.sharedInstance()
-        try session.setCategory(.playAndRecord, mode: .default, options: [.allowBluetooth, .defaultToSpeaker])
+        try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
         try session.setActive(true)
     }
 
@@ -160,18 +189,23 @@ final class AudioRecorderService: NSObject, ObservableObject {
     }
 
     @objc private func handleRouteChange(notification: Notification) {
-        guard let reason = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
-              reason == AVAudioSession.RouteChangeReason.oldDeviceUnavailable.rawValue else { return }
-        print("Headphones unplugged")
+        guard let reasonValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue),
+              reason == .oldDeviceUnavailable else { return }
+
+        print("Audio route changed (e.g. headphones unplugged)")
     }
 
     @objc private func handleInterruption(notification: Notification) {
-        guard let type = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt else { return }
-        if type == AVAudioSession.InterruptionType.began.rawValue {
+        guard let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+
+        if type == .began {
+            print("Audio interruption began")
             stopRecording()
         } else {
+            print("Audio interruption ended")
             try? startRecording()
         }
     }
 }
-

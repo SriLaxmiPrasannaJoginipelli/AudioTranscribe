@@ -6,55 +6,45 @@
 //
 
 import Foundation
+import SwiftData
 
 actor TranscriptionQueue {
-    private let transcriptionService = TranscriptionService()
-    private let fallback = AppleSpeechFallback()
-    
-    private var pendingFiles: [URL] = []
-    private var failureCount = 0
-    private let failureThreshold = 5
+    private var isProcessing = false
+    private var queue: [(segment: TranscriptionSegment, context: ModelContext)] = []
 
-    func enqueue(_ file: URL) {
-        pendingFiles.append(file)
-        processQueue()
+    func enqueue(segment: TranscriptionSegment, context: ModelContext) async {
+        queue.append((segment, context))
+        await processNext()
     }
 
-    private func processQueue() {
-        Task {
-            while !pendingFiles.isEmpty {
-                let current = pendingFiles.removeFirst()
-                do {
-                    let result: String
-                    if failureCount >= failureThreshold {
-                        print("⚠️ Using Apple fallback transcription")
-                        result = try await fallback.transcribe(fileURL: current)
-                    } else {
-                        result = try await transcriptionService.transcribeAudio(fileURL: current)
-                    }
-                    print("Transcription Success:\n\(result)")
-                    failureCount = 0
-                } catch {
-                    if let transcriptionError = error as? TranscriptionError {
-                        switch transcriptionError {
-                        case .networkError(let message):
-                            print("Network Error: \(message)")
-                        case .quotaExceeded:
-                            print(" Quota exceeded – check OpenAI billing.")
-                        case .decodeError:
-                            print("Failed to decode Whisper API response.")
-                        }
-                    } else {
-                        print("❌ Unknown error: \(error.localizedDescription)")
-                    }
+    private func processNext() async {
+        guard !isProcessing, let (segment, context) = queue.first else { return }
+        isProcessing = true
 
-                    failureCount += 1
-                    let delay = pow(2.0, Double(failureCount)) // exponential backoff
-                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
-                    pendingFiles.insert(current, at: 0) // requeue
+        let url = URL(fileURLWithPath: segment.audioFilePath)
+
+        do {
+            let text = try await TranscriptionService().transcribeAudio(fileURL: url)
+            await MainActor.run {
+                segment.transcriptionText = text
+                segment.status = .completed
+                do {
+                    try context.save()
+                } catch {
+                    print("Save error: \(error)")
                 }
             }
+        } catch {
+            await MainActor.run {
+                segment.status = .failed
+                segment.transcriptionText = "\(error.localizedDescription)"
+            }
+        }
+
+        queue.removeFirst()
+        isProcessing = false
+        if !queue.isEmpty {
+            await processNext()
         }
     }
 }
-

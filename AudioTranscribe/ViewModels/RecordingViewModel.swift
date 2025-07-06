@@ -63,7 +63,10 @@ class RecordingViewModel: ObservableObject {
         let segment = TranscriptionSegment(audioFilePath: url.path, session: session)
         session.segments.append(segment)
         context.insert(segment)
-        Task { await queue.enqueue(url) }
+
+        Task {
+            await queue.enqueue(segment: segment, context: context)
+        }
     }
 }
 
