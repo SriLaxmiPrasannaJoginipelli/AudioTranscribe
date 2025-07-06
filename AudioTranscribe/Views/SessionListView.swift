@@ -13,8 +13,8 @@ struct SessionListView: View {
     @Query(sort: \RecordingSession.createdAt, order: .reverse) var allSessions: [RecordingSession]
     @State private var searchText = ""
 
-    // Group sessions by day
-    private var groupedSessions: [String: [RecordingSession]] {
+    // Group sessions by day - returns sorted array of tuples
+    private var groupedSessions: [(dateKey: String, sessions: [RecordingSession])] {
         let filtered = searchText.isEmpty ? allSessions : allSessions.filter {
             $0.title.localizedCaseInsensitiveContains(searchText)
         }
@@ -25,8 +25,8 @@ struct SessionListView: View {
         }
 
         return grouped
-            .sorted(by: { $0.key > $1.key })
-            .reduce(into: [:]) { $0[$1.key] = $1.value }
+            .map { (dateKey: $0.key, sessions: $0.value) }
+            .sorted { $0.dateKey > $1.dateKey }
     }
 
     var body: some View {
@@ -35,13 +35,13 @@ struct SessionListView: View {
                 if groupedSessions.isEmpty {
                     emptyStateView
                 } else {
-                    ForEach(groupedSessions.keys.sorted(by: >), id: \.self) { dateKey in
-                        Section(header: Text(dateKey).font(.subheadline).foregroundColor(.secondary)) {
-                            ForEach(groupedSessions[dateKey]!) { session in
+                    ForEach(groupedSessions, id: \.dateKey) { group in
+                        Section(header: Text(group.dateKey).font(.subheadline).foregroundColor(.secondary)) {
+                            ForEach(group.sessions) { session in
                                 sessionCardView(session: session)
                             }
                             .onDelete { indexSet in
-                                deleteSessions(indexSet, in: dateKey)
+                                deleteSessions(indexSet, from: group.sessions)
                             }
                         }
                     }
@@ -54,9 +54,7 @@ struct SessionListView: View {
         }
     }
 
-    private func deleteSessions(_ offsets: IndexSet, in dateKey: String) {
-        guard var sessions = groupedSessions[dateKey] else { return }
-
+    private func deleteSessions(_ offsets: IndexSet, from sessions: [RecordingSession]) {
         for index in offsets {
             let sessionToDelete = sessions[index]
             context.delete(sessionToDelete)
