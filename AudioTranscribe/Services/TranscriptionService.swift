@@ -16,6 +16,10 @@ class TranscriptionService {
     
     private var consecutiveFailures = 0
     private let maxFailuresBeforeFallback = 5
+    
+    var shouldFallbackToLocalModel: Bool {
+        return consecutiveFailures >= maxFailuresBeforeFallback
+    }
 
     private var apiKey: String {
         guard let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),

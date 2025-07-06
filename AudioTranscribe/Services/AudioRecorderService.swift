@@ -29,6 +29,7 @@ final class AudioRecorderService: NSObject, ObservableObject {
     @Published var showMicPermissionAlert = false
     weak var delegate: AudioRecorderDelegate?
     
+    var isTesting = false
     // MARK: - Lifecycle
     
     override init() {

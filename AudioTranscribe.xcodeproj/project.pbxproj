@@ -42,7 +42,12 @@
 		8644F8522E1A27DE00F0702C /* Exceptions for "Tests" folder in "AudioTranscribe" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				AudioTranscribeTests/AudioTranscribeTests.swift,
+				AudioTranscribeTests/AudioRecorderServiceTests.swift,
+				AudioTranscribeTests/EdgeCaseTests.swift,
+				AudioTranscribeTests/PerformanceTests.swift,
+				AudioTranscribeTests/RecordingSessionTests.swift,
+				AudioTranscribeTests/TranscriptionSegmentTests.swift,
+				AudioTranscribeTests/TranscriptionServiceTests.swift,
 				AudioTranscribeUITests/AudioTranscribeUITests.swift,
 				AudioTranscribeUITests/AudioTranscribeUITestsLaunchTests.swift,
 			);
@@ -51,7 +56,13 @@
 		8644F8532E1A27DE00F0702C /* Exceptions for "Tests" folder in "AudioTranscribeTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				AudioTranscribeTests/AudioTranscribeTests.swift,
+				AudioTranscribeTests/AudioRecorderServiceTests.swift,
+				AudioTranscribeTests/EdgeCaseTests.swift,
+				AudioTranscribeTests/PerformanceTests.swift,
+				AudioTranscribeTests/RecordingSessionTests.swift,
+				AudioTranscribeTests/TranscriptionSegmentTests.swift,
+				AudioTranscribeTests/TranscriptionServiceTests.swift,
+				test.caf,
 			);
 			target = 862CC9422E19A30A0047283E /* AudioTranscribeTests */;
 		};
