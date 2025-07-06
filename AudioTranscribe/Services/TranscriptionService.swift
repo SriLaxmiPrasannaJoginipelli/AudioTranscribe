@@ -18,7 +18,10 @@ enum TranscriptionError: Error {
 }
 
 class TranscriptionService {
+
     let apiKey = Bundle.main.infoDictionary?["ASSEMBLY_API_KEY"] as? String ?? ""
+    private let endpoint = URL(string: "https://api.openai.com/v1/audio/transcriptions")!
+
 
     func transcribeAudio(fileURL: URL) async throws -> String {
         var request = URLRequest(url: endpoint)
