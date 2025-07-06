@@ -19,7 +19,13 @@ enum TranscriptionError: Error {
 
 class TranscriptionService {
 
-    let apiKey = Bundle.main.infoDictionary?["ASSEMBLY_API_KEY"] as? String ?? ""
+    private var apiKey: String {
+        guard let key = Bundle.main.infoDictionary?["API_KEY"] as? String else {
+            fatalError("❌ WHISPER_API_KEY not found in Info.plist.")
+        }
+        return key
+    }
+
     private let endpoint = URL(string: "https://api.openai.com/v1/audio/transcriptions")!
 
 

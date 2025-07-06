@@ -22,8 +22,9 @@
         <string>audio</string>
     </array>
 
-    <key>ASSEMBLY_API_KEY</key>
-    <string>32b828d35eb64681a33bf15644b4e9f6</string>
+    <key>API_KEY</key>
+    <string>sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</string>
+
 </dict>
 </plist>
 
