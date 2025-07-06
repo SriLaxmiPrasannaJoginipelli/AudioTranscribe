@@ -11,6 +11,7 @@ enum TranscriptionError: LocalizedError {
     case quotaExceeded
     case networkError(String)
     case decodeError
+    case fallbackUnavailable
 
     var errorDescription: String? {
         switch self {
@@ -20,6 +21,8 @@ enum TranscriptionError: LocalizedError {
             return "Network error: \(message)"
         case .decodeError:
             return "Could not parse Whisper API response."
+        case .fallbackUnavailable:
+            return "Fallback transcription service is currently unavailable."
         }
     }
 }
