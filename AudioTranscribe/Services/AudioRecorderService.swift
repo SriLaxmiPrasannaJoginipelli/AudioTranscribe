@@ -10,6 +10,8 @@ import Combine
 
 protocol AudioRecorderDelegate: AnyObject {
     func didFinishSegment(_ url: URL)
+    func updateLevel(_ level: Float)
+    
 }
 
 final class AudioRecorderService: NSObject, ObservableObject {
@@ -188,8 +190,28 @@ final class AudioRecorderService: NSObject, ObservableObject {
         try audioEngine.start()
         
         mixerNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, _ in
-            try? self?.file?.write(from: buffer)
+            guard let self = self else { return }
+            
+            try? self.file?.write(from: buffer)
+            
+            // Real-time level metering
+            buffer.frameLength = 1024
+            let channelData = buffer.floatChannelData?[0]
+            let frameCount = Int(buffer.frameLength)
+            var rms: Float = 0
+            
+            if let channelData = channelData {
+                for i in 0..<frameCount {
+                    rms += channelData[i] * channelData[i]
+                }
+                rms = sqrt(rms / Float(frameCount))
+                let avgPower = 20 * log10(rms)
+                DispatchQueue.main.async {
+                    self.delegate?.updateLevel(avgPower)
+                }
+            }
         }
+        
     }
     
     

@@ -17,6 +17,8 @@ class RecordingViewModel: ObservableObject {
     @Published var transcriptionError: String?
     @Published var recordingDuration: TimeInterval = 0
     private var timer: Timer?
+    @Published var currentLevel: Float = -160.0 
+
     
     static let supportedLanguages: [TranscriptionLanguage] = [
         .init(code: "en", name: "English"),
@@ -103,4 +105,10 @@ extension RecordingViewModel: AudioRecorderDelegate {
     func didFinishSegment(_ url: URL) {
         handleSegment(url)
     }
+    func updateLevel(_ level: Float) {
+        DispatchQueue.main.async {
+            self.currentLevel = max(-60, level) 
+        }
+    }
+
 }
