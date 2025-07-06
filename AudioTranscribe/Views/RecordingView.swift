@@ -113,6 +113,7 @@ struct RecordingView: View {
                                     }
                                 }
                                 .pickerStyle(.menu)
+                                .disabled(viewModel.isRecording)
                                 .tint(.primary)
                                 .padding()
                                 .background(
