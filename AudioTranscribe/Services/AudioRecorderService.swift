@@ -4,14 +4,12 @@
 //
 //  Created by Srilu Rao on 7/5/25.
 //
-
 import AVFoundation
 import Combine
 
 protocol AudioRecorderDelegate: AnyObject {
     func didFinishSegment(_ url: URL)
     func updateLevel(_ level: Float)
-    
 }
 
 final class AudioRecorderService: NSObject, ObservableObject {
@@ -25,8 +23,7 @@ final class AudioRecorderService: NSObject, ObservableObject {
     private var recordingStartTime: Date?
     private var segmentTimer: Timer?
     private var lastSegmentStartTime: Date?
-    
-    
+    private var currentSessionId: UUID = UUID() 
     
     @Published var isRecording = false
     @Published var showMicPermissionAlert = false
@@ -64,6 +61,13 @@ final class AudioRecorderService: NSObject, ObservableObject {
                 return false
             }
         }
+        
+        // Clean up any previous session data
+        cleanupPreviousSession()
+        
+        // Generate new session ID
+        currentSessionId = UUID()
+        
         stopRecording()
         recordingStartTime = Date()
         lastSegmentStartTime = Date()
@@ -84,12 +88,10 @@ final class AudioRecorderService: NSObject, ObservableObject {
         return true
     }
     
-    
     func stopRecording() {
         audioEngine?.stop()
         mixerNode?.removeTap(onBus: 0)
         file = nil
-        persistCurrentRecordingState()
         
         try? AVAudioSession.sharedInstance().setActive(false)
         
@@ -100,7 +102,15 @@ final class AudioRecorderService: NSObject, ObservableObject {
             self.isRecording = false
         }
         
-        guard let rawURL = recordingURL else { return }
+        guard let rawURL = recordingURL else {
+            // Clear any persisted state since we have no current recording
+            UserDefaults.standard.removeObject(forKey: "PendingRecordingURL")
+            UserDefaults.standard.removeObject(forKey: "PendingSessionID")
+            return
+        }
+        
+        // Clear the current recording URL to prevent reuse
+        recordingURL = nil
         
         Task {
             do {
@@ -108,6 +118,8 @@ final class AudioRecorderService: NSObject, ObservableObject {
                 let duration = try await getAudioDuration(url: rawURL)
                 if duration < 1 {
                     print("Ignoring short segment (<1s)")
+                    // Clean up the file
+                    try? FileManager.default.removeItem(at: rawURL)
                     return
                 }
                 
@@ -116,47 +128,23 @@ final class AudioRecorderService: NSObject, ObservableObject {
                     self.delegate?.didFinishSegment(cleanURL)
                 }
                 
+                // Clean up the original file
+                try? FileManager.default.removeItem(at: rawURL)
+                
             } catch {
                 print("Finalization failed: \(error.localizedDescription)")
+                // Clean up the file even on error
+                try? FileManager.default.removeItem(at: rawURL)
             }
         }
         
+        // Clear persisted state after stopping
+        UserDefaults.standard.removeObject(forKey: "PendingRecordingURL")
+        UserDefaults.standard.removeObject(forKey: "PendingSessionID")
     }
-    
-    
-    
     
     // MARK: - Segmentation Logic
     
-    
-    private func reencodeTrimmedM4A(from url: URL, startOffset: Double, duration: Double) async throws -> URL {
-        let asset = AVAsset(url: url)
-        guard let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
-            throw NSError(domain: "Reencode", code: -2, userInfo: [NSLocalizedDescriptionKey: "Failed to create export session."])
-        }
-        
-        let outputURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("cleaned-\(UUID().uuidString.prefix(6)).m4a")
-        
-        exporter.outputURL = outputURL
-        exporter.outputFileType = .m4a
-        
-        let timescale: CMTimeScale = 600
-        exporter.timeRange = CMTimeRange(
-            start: CMTime(seconds: startOffset, preferredTimescale: timescale),
-            duration: CMTime(seconds: duration, preferredTimescale: timescale)
-        )
-        
-        return try await withCheckedThrowingContinuation { continuation in
-            exporter.exportAsynchronously {
-                if let error = exporter.error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: outputURL)
-                }
-            }
-        }
-    }
     @MainActor
     func finalizeSegment() {
         mixerNode?.removeTap(onBus: 0)
@@ -164,6 +152,7 @@ final class AudioRecorderService: NSObject, ObservableObject {
         audioEngine?.reset()
 
         let finishedCAFURL = recordingURL
+        let sessionId = currentSessionId
         recordingURL = nil
         file = nil
 
@@ -175,34 +164,44 @@ final class AudioRecorderService: NSObject, ObservableObject {
                     let duration = try await self.getAudioDuration(url: finishedCAFURL)
                     if duration >= 1 {
                         let cleanM4AURL = try await self.reencodeToM4A(finishedCAFURL)
+                        
+                        // Only send to delegate if this is still the current session
                         await MainActor.run {
-                            self.delegate?.didFinishSegment(cleanM4AURL)
+                            if sessionId == self.currentSessionId {
+                                self.delegate?.didFinishSegment(cleanM4AURL)
+                            }
                         }
                     } else {
                         print("Discarded segment: too short")
                     }
+                    
+                    // Clean up the original CAF file
+                    try? FileManager.default.removeItem(at: finishedCAFURL)
                 }
 
-                try await MainActor.run {
-                    try self.startNewSegment()
+                // Only start new segment if still in the same session
+                if sessionId == self.currentSessionId && self.isRecording {
+                    try await MainActor.run {
+                        try self.startNewSegment()
+                    }
                 }
 
             } catch {
                 print("finalizeSegment error: \(error)")
-                Task {
-                    _ = try? await self.startRecording()
+                // Only restart if still in the same session
+                if sessionId == self.currentSessionId && self.isRecording {
+                    Task {
+                        _ = try? await self.startRecording()
+                    }
                 }
             }
-
         }
     }
-
-    
     
     @MainActor
     private func startNewSegment() throws {
         let newURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("segment-\(UUID().uuidString.prefix(6)).caf")
+            .appendingPathComponent("segment-\(currentSessionId.uuidString.prefix(6))-\(UUID().uuidString.prefix(6)).caf")
         
         recordingURL = newURL
         lastSegmentStartTime = Date()
@@ -241,8 +240,9 @@ final class AudioRecorderService: NSObject, ObservableObject {
             }
         }
         
+        // Persist the current state
+        persistCurrentRecordingState()
     }
-    
     
     // MARK: - Utility
     
@@ -313,25 +313,78 @@ final class AudioRecorderService: NSObject, ObservableObject {
         }
     }
     
-    // MARK: Preserve url upon termination
+    // MARK: - Session Management
+    
+    private func cleanupPreviousSession() {
+        // Remove any pending recordings from previous sessions
+        UserDefaults.standard.removeObject(forKey: "PendingRecordingURL")
+        UserDefaults.standard.removeObject(forKey: "PendingSessionID")
+        
+        // Clean up any temporary files from previous sessions
+        cleanupTemporaryFiles()
+    }
+    
+    private func cleanupTemporaryFiles() {
+        let tempDir = FileManager.default.temporaryDirectory
+        do {
+            let files = try FileManager.default.contentsOfDirectory(at: tempDir, includingPropertiesForKeys: nil)
+            for file in files {
+                let fileName = file.lastPathComponent
+                if fileName.hasPrefix("segment-") || fileName.hasPrefix("cleaned-") {
+                    try? FileManager.default.removeItem(at: file)
+                }
+            }
+        } catch {
+            print("Error cleaning temporary files: \(error)")
+        }
+    }
+    
+    // MARK: - Persistence
+    
     func persistCurrentRecordingState() {
         if let url = recordingURL {
             UserDefaults.standard.set(url.path, forKey: "PendingRecordingURL")
+            UserDefaults.standard.set(currentSessionId.uuidString, forKey: "PendingSessionID")
         }
     }
 
     func recoverIfNeeded() {
-        if let path = UserDefaults.standard.string(forKey: "PendingRecordingURL"),
-           FileManager.default.fileExists(atPath: path) {
-            let url = URL(fileURLWithPath: path)
-            Task {
-                let duration = try? await getAudioDuration(url: url)
-                if let duration, duration > 1 {
-                    delegate?.didFinishSegment(url)
+        guard let path = UserDefaults.standard.string(forKey: "PendingRecordingURL"),
+              let sessionIdString = UserDefaults.standard.string(forKey: "PendingSessionID"),
+              let sessionId = UUID(uuidString: sessionIdString),
+              FileManager.default.fileExists(atPath: path) else {
+            // Clean up invalid state
+            UserDefaults.standard.removeObject(forKey: "PendingRecordingURL")
+            UserDefaults.standard.removeObject(forKey: "PendingSessionID")
+            return
+        }
+        
+        let url = URL(fileURLWithPath: path)
+        
+        Task {
+            do {
+                let duration = try await getAudioDuration(url: url)
+                if duration > 1 {
+                    // Process the recovered file properly
+                    let cleanURL = try await reencodeToM4A(url)
+                    await MainActor.run {
+                        self.delegate?.didFinishSegment(cleanURL)
+                    }
+                    
+                    // Clean up the original file
+                    try? FileManager.default.removeItem(at: url)
+                } else {
+                    print("Discarded recovered segment: too short")
+                    try? FileManager.default.removeItem(at: url)
                 }
-                UserDefaults.standard.removeObject(forKey: "PendingRecordingURL")
+            } catch {
+                print("Error recovering segment: \(error)")
+                try? FileManager.default.removeItem(at: url)
             }
+            
+            // Clean up the persisted state
+            UserDefaults.standard.removeObject(forKey: "PendingRecordingURL")
+            UserDefaults.standard.removeObject(forKey: "PendingSessionID")
         }
     }
-
 }
