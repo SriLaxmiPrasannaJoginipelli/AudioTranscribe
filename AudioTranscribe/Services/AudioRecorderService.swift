@@ -89,6 +89,7 @@ final class AudioRecorderService: NSObject, ObservableObject {
         audioEngine?.stop()
         mixerNode?.removeTap(onBus: 0)
         file = nil
+        persistCurrentRecordingState()
         
         try? AVAudioSession.sharedInstance().setActive(false)
         
@@ -311,4 +312,26 @@ final class AudioRecorderService: NSObject, ObservableObject {
             }
         }
     }
+    
+    // MARK: Preserve url upon termination
+    func persistCurrentRecordingState() {
+        if let url = recordingURL {
+            UserDefaults.standard.set(url.path, forKey: "PendingRecordingURL")
+        }
+    }
+
+    func recoverIfNeeded() {
+        if let path = UserDefaults.standard.string(forKey: "PendingRecordingURL"),
+           FileManager.default.fileExists(atPath: path) {
+            let url = URL(fileURLWithPath: path)
+            Task {
+                let duration = try? await getAudioDuration(url: url)
+                if let duration, duration > 1 {
+                    delegate?.didFinishSegment(url)
+                }
+                UserDefaults.standard.removeObject(forKey: "PendingRecordingURL")
+            }
+        }
+    }
+
 }
