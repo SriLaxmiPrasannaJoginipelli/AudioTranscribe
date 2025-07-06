@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		8644F6AA2E1A15CF00F0702C /* Secrets.plist in Resources */ = {isa = PBXBuildFile; fileRef = 8644F6A92E1A15CF00F0702C /* Secrets.plist */; };
+		8644F8042E1A255C00F0702C /* AudioTranscribeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8644F7D02E1A255C00F0702C /* AudioTranscribeApp.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,22 +35,50 @@
 		862CC9AF2E19B6560047283E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		8644F6612E1A11D300F0702C /* AudioTranscribe.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = AudioTranscribe.xcodeproj; sourceTree = "<group>"; };
 		8644F6A92E1A15CF00F0702C /* Secrets.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Secrets.plist; sourceTree = "<group>"; };
+		8644F7D02E1A255C00F0702C /* AudioTranscribeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTranscribeApp.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		8644F8522E1A27DE00F0702C /* Exceptions for "Tests" folder in "AudioTranscribe" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AudioTranscribeTests/AudioTranscribeTests.swift,
+				AudioTranscribeUITests/AudioTranscribeUITests.swift,
+				AudioTranscribeUITests/AudioTranscribeUITestsLaunchTests.swift,
+			);
+			target = 862CC9352E19A3080047283E /* AudioTranscribe */;
+		};
+		8644F8532E1A27DE00F0702C /* Exceptions for "Tests" folder in "AudioTranscribeTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AudioTranscribeTests/AudioTranscribeTests.swift,
+			);
+			target = 862CC9422E19A30A0047283E /* AudioTranscribeTests */;
+		};
+		8644F8542E1A27DE00F0702C /* Exceptions for "Tests" folder in "AudioTranscribeUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AudioTranscribeUITests/AudioTranscribeUITests.swift,
+				AudioTranscribeUITests/AudioTranscribeUITestsLaunchTests.swift,
+			);
+			target = 862CC94C2E19A30A0047283E /* AudioTranscribeUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		862CC9382E19A3080047283E /* AudioTranscribe */ = {
+		8644F8492E1A27DE00F0702C /* Tests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8644F8522E1A27DE00F0702C /* Exceptions for "Tests" folder in "AudioTranscribe" target */,
+				8644F8532E1A27DE00F0702C /* Exceptions for "Tests" folder in "AudioTranscribeTests" target */,
+				8644F8542E1A27DE00F0702C /* Exceptions for "Tests" folder in "AudioTranscribeUITests" target */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		8644F86B2E1A27F400F0702C /* AudioTranscribe */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = AudioTranscribe;
-			sourceTree = "<group>";
-		};
-		862CC9462E19A30A0047283E /* AudioTranscribeTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = AudioTranscribeTests;
-			sourceTree = "<group>";
-		};
-		862CC9502E19A30A0047283E /* AudioTranscribeUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = AudioTranscribeUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -84,9 +113,9 @@
 			children = (
 				8644F6A92E1A15CF00F0702C /* Secrets.plist */,
 				862CC9AF2E19B6560047283E /* Info.plist */,
-				862CC9382E19A3080047283E /* AudioTranscribe */,
-				862CC9462E19A30A0047283E /* AudioTranscribeTests */,
-				862CC9502E19A30A0047283E /* AudioTranscribeUITests */,
+				8644F7D02E1A255C00F0702C /* AudioTranscribeApp.swift */,
+				8644F86B2E1A27F400F0702C /* AudioTranscribe */,
+				8644F8492E1A27DE00F0702C /* Tests */,
 				862CC9372E19A3080047283E /* Products */,
 			);
 			sourceTree = "<group>";
@@ -124,7 +153,8 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				862CC9382E19A3080047283E /* AudioTranscribe */,
+				8644F8492E1A27DE00F0702C /* Tests */,
+				8644F86B2E1A27F400F0702C /* AudioTranscribe */,
 			);
 			name = AudioTranscribe;
 			packageProductDependencies = (
@@ -146,9 +176,6 @@
 			dependencies = (
 				862CC9452E19A30A0047283E /* PBXTargetDependency */,
 			);
-			fileSystemSynchronizedGroups = (
-				862CC9462E19A30A0047283E /* AudioTranscribeTests */,
-			);
 			name = AudioTranscribeTests;
 			packageProductDependencies = (
 			);
@@ -168,9 +195,6 @@
 			);
 			dependencies = (
 				862CC94F2E19A30A0047283E /* PBXTargetDependency */,
-			);
-			fileSystemSynchronizedGroups = (
-				862CC9502E19A30A0047283E /* AudioTranscribeUITests */,
 			);
 			name = AudioTranscribeUITests;
 			packageProductDependencies = (
@@ -259,6 +283,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8644F8042E1A255C00F0702C /* AudioTranscribeApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
