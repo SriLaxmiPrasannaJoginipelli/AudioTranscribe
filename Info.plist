@@ -22,9 +22,6 @@
         <string>audio</string>
     </array>
 
-    <key>API_KEY</key>
-    <string>sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</string>
-
 </dict>
 </plist>
 

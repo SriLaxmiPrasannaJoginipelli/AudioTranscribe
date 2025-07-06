@@ -20,8 +20,10 @@ enum TranscriptionError: Error {
 class TranscriptionService {
 
     private var apiKey: String {
-        guard let key = Bundle.main.infoDictionary?["API_KEY"] as? String else {
-            fatalError("❌ WHISPER_API_KEY not found in Info.plist.")
+        guard let path = Bundle.main.path(forResource: "Secrets", ofType: "plist"),
+              let dict = NSDictionary(contentsOfFile: path) as? [String: Any],
+              let key = dict["API_KEY"] as? String else {
+            fatalError("Secrets.plist not found or invalid")
         }
         return key
     }
