@@ -11,12 +11,6 @@ struct WhisperTranscriptionResponse: Codable {
     let text: String
 }
 
-enum TranscriptionError: Error {
-    case quotaExceeded
-    case networkError(String)
-    case decodeError
-}
-
 class TranscriptionService {
 
     private var apiKey: String {

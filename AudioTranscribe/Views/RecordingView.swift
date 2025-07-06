@@ -6,25 +6,28 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct RecordingView: View {
-    @StateObject private var recorder = AudioRecorderService()
-    
+    @Environment(\.modelContext) private var context
+    @StateObject private var viewModel: RecordingViewModel
+
+    init() {
+        _viewModel = StateObject(wrappedValue: RecordingViewModel(context: SwiftDataStack.container.mainContext))
+    }
+
     var body: some View {
-        VStack(spacing: 24) {
-            Text(recorder.isRecording ? "🎙️ Recording..." : "Ready")
+        VStack(spacing: 32) {
+            Text(viewModel.isRecording ? "🎙️ Recording..." : "Ready")
                 .font(.title2)
-            Button(recorder.isRecording ? "Stop" : "Start Recording") {
-                if recorder.isRecording {
-                    recorder.stopRecording()
-                } else {
-                    try? recorder.startRecording()
-                }
+            Button(viewModel.isRecording ? "Stop Recording" : "Start Recording") {
+                viewModel.toggleRecording()
             }
             .padding()
-            .background(Color.blue.opacity(0.8))
+            .background(viewModel.isRecording ? .red : .green)
             .foregroundColor(.white)
             .clipShape(Capsule())
+            NavigationLink("📁 View Sessions", destination: SessionListView())
         }
         .padding()
     }

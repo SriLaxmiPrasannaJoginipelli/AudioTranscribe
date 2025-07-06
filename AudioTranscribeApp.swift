@@ -11,8 +11,12 @@ import SwiftUI
 struct AudioTranscribeApp: App {
     var body: some Scene {
         WindowGroup {
-            RecordingView()
+            NavigationStack {
+                RecordingView()
+            }
+            .modelContainer(SwiftDataStack.container)
         }
     }
 }
+
 

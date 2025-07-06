@@ -6,3 +6,19 @@
 //
 
 import Foundation
+import SwiftData
+
+enum SwiftDataStack {
+    static var container: ModelContainer = {
+        do {
+            let schema = Schema([
+                RecordingSession.self,
+                TranscriptionSegment.self
+            ])
+            return try ModelContainer(for: schema)
+        } catch {
+            fatalError("Failed to create SwiftData container: \(error)")
+        }
+    }()
+}
+

@@ -32,10 +32,22 @@ actor TranscriptionQueue {
                     } else {
                         result = try await transcriptionService.transcribeAudio(fileURL: current)
                     }
-                    print("✅ Transcription Success:\n\(result)")
+                    print("Transcription Success:\n\(result)")
                     failureCount = 0
                 } catch {
-                    print("❌ Transcription Error: \(error.localizedDescription)")
+                    if let transcriptionError = error as? TranscriptionError {
+                        switch transcriptionError {
+                        case .networkError(let message):
+                            print("Network Error: \(message)")
+                        case .quotaExceeded:
+                            print(" Quota exceeded – check OpenAI billing.")
+                        case .decodeError:
+                            print("Failed to decode Whisper API response.")
+                        }
+                    } else {
+                        print("❌ Unknown error: \(error.localizedDescription)")
+                    }
+
                     failureCount += 1
                     let delay = pow(2.0, Double(failureCount)) // exponential backoff
                     try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
