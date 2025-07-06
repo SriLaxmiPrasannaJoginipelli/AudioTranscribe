@@ -13,6 +13,10 @@ class RecordingViewModel: ObservableObject {
     private let context: ModelContext
     private let recorder = AudioRecorderService()
     private let queue = TranscriptionQueue()
+    @Published var transcriptionMessage: String?
+    @Published var transcriptionError: String?
+    @Published var recordingDuration: TimeInterval = 0
+    private var timer: Timer?
     
     static let supportedLanguages: [TranscriptionLanguage] = [
         .init(code: "en", name: "English"),
@@ -48,6 +52,7 @@ class RecordingViewModel: ObservableObject {
             currentSession = RecordingSession(title: "Session \(Date().formatted(.dateTime.hour().minute()))")
             context.insert(currentSession!)
             isRecording = true
+            startTimer()
         } catch {
             print("⚠️ Failed to start: \(error)")
         }
@@ -56,6 +61,7 @@ class RecordingViewModel: ObservableObject {
     func stopRecording() {
         recorder.stopRecording()
         isRecording = false
+        stopTimer()
     }
 
     func handleSegment(_ url: URL) {
@@ -65,9 +71,32 @@ class RecordingViewModel: ObservableObject {
         context.insert(segment)
 
         Task {
-            await queue.enqueue(segment: segment, context: context)
+            transcriptionMessage = "Transcribing segment..."
+            do {
+                print("selected language is :\(selectedLanguage.code)")
+                try await queue.enqueue(segment: segment, context: context, language: selectedLanguage)
+                transcriptionMessage = "Transcription complete"
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                transcriptionMessage = nil
+            } catch {
+                transcriptionError = "Transcription failed: \(error.localizedDescription)"
+            }
+        }
+
+    }
+    
+    private func startTimer() {
+        recordingDuration = 0
+        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.recordingDuration += 1
         }
     }
+
+    private func stopTimer() {
+        timer?.invalidate()
+        timer = nil
+    }
+
 }
 
 extension RecordingViewModel: AudioRecorderDelegate {

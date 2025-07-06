@@ -23,9 +23,8 @@ class TranscriptionService {
     }
 
     private let endpoint = URL(string: "https://api.openai.com/v1/audio/transcriptions")!
-
-
-    func transcribeAudio(fileURL: URL) async throws -> String {
+    
+    func transcribeAudio(fileURL: URL, languageCode: String) async throws -> String {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
@@ -33,7 +32,7 @@ class TranscriptionService {
         let boundary = UUID().uuidString
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
 
-        let body = try createFormData(fileURL: fileURL, boundary: boundary)
+        let body = try createFormData(fileURL: fileURL, boundary: boundary, languageCode: languageCode)
         let (data, response) = try await URLSession.shared.upload(for: request, from: body)
 
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -57,26 +56,34 @@ class TranscriptionService {
         }
     }
 
-    private func createFormData(fileURL: URL, boundary: String) throws -> Data {
+    
+    private func createFormData(fileURL: URL, boundary: String, languageCode: String) throws -> Data {
         var data = Data()
         let fileData = try Data(contentsOf: fileURL)
 
-        data.append("--\(boundary)\r\n".data(using: .utf8)!)
         let filename = fileURL.lastPathComponent
-        let mimeType = "audio/m4a" 
+        let mimeType = "audio/m4a"
 
+        // File
+        data.append("--\(boundary)\r\n".data(using: .utf8)!)
         data.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
         data.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
-
         data.append(fileData)
         data.append("\r\n".data(using: .utf8)!)
 
+        // Model
         data.append("--\(boundary)\r\n".data(using: .utf8)!)
         data.append("Content-Disposition: form-data; name=\"model\"\r\n\r\n".data(using: .utf8)!)
         data.append("whisper-1\r\n".data(using: .utf8)!)
 
+        // Language
+        data.append("--\(boundary)\r\n".data(using: .utf8)!)
+        data.append("Content-Disposition: form-data; name=\"language\"\r\n\r\n".data(using: .utf8)!)
+        data.append("\(languageCode)\r\n".data(using: .utf8)!)
+
         data.append("--\(boundary)--\r\n".data(using: .utf8)!)
         return data
     }
+
 }
 

@@ -14,154 +14,111 @@ protocol AudioRecorderDelegate: AnyObject {
 
 final class AudioRecorderService: NSObject, ObservableObject {
     // MARK: - Properties
-
+    
     private var audioEngine: AVAudioEngine!
     private var mixerNode: AVAudioMixerNode!
     private var file: AVAudioFile?
     private let segmentDuration: TimeInterval = 30
     private(set) var recordingURL: URL?
-
+    private var recordingStartTime: Date?
+    private var segmentTimer: Timer?
+    private var lastSegmentStartTime: Date?
+    
+    
+    
     @Published var isRecording = false
     weak var delegate: AudioRecorderDelegate?
-
+    
     // MARK: - Lifecycle
-
+    
     override init() {
         super.init()
         setupNotifications()
     }
-
+    
     // MARK: - Recording Control
-
+    
+    @MainActor
     func startRecording() throws {
         stopRecording()
-
-        audioEngine = AVAudioEngine()
-        mixerNode = AVAudioMixerNode()
-
-        let inputFormat = audioEngine.inputNode.outputFormat(forBus: 0)
-        audioEngine.attach(mixerNode)
-        audioEngine.connect(audioEngine.inputNode, to: mixerNode, format: inputFormat)
-
-        print("Using audio format: \(inputFormat)")
-
-        let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("recording-\(UUID().uuidString.prefix(6)).caf")
-        recordingURL = url
-
-        file = try AVAudioFile(forWriting: url, settings: inputFormat.settings)
-
-        mixerNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, _ in
-            try? self?.file?.write(from: buffer)
+        recordingStartTime = Date()
+        lastSegmentStartTime = Date()
+        
+        try startNewSegment()
+        
+        segmentTimer = Timer.scheduledTimer(withTimeInterval: segmentDuration, repeats: true) { [weak self] _ in
+            self?.finalizeSegment()
         }
-
+        
         try configureAudioSession()
-        try audioEngine.start()
-
+        
         DispatchQueue.main.async {
             self.isRecording = true
         }
     }
-
+    
+    
     func stopRecording() {
         audioEngine?.stop()
         mixerNode?.removeTap(onBus: 0)
+        file = nil
+        
         try? AVAudioSession.sharedInstance().setActive(false)
-
+        
+        segmentTimer?.invalidate()
+        segmentTimer = nil
+        
         DispatchQueue.main.async {
             self.isRecording = false
         }
-
+        
         guard let rawURL = recordingURL else { return }
-
+        
         Task {
             do {
-                let cleanURL = try await reencodeToM4A(rawURL)
-                let duration = try await getAudioDuration(url: cleanURL)
-
-                if duration < segmentDuration {
-                    await MainActor.run {
-                        self.delegate?.didFinishSegment(cleanURL)
-                    }
-                } else {
-                    let segments = try await segmentAudioFile(cleanURL)
-                    for segment in segments {
-                        await MainActor.run {
-                            self.delegate?.didFinishSegment(segment)
-                        }
-                    }
+                try await Task.sleep(nanoseconds: 300_000_000)
+                let duration = try await getAudioDuration(url: rawURL)
+                if duration < 1 {
+                    print("Ignoring short segment (<1s)")
+                    return
                 }
+                
+                let cleanURL = try await reencodeToM4A(rawURL)
+                await MainActor.run {
+                    self.delegate?.didFinishSegment(cleanURL)
+                }
+                
             } catch {
                 print("Finalization failed: \(error.localizedDescription)")
             }
         }
+        
     }
-
+    
+    
+    
+    
     // MARK: - Segmentation Logic
-
-    func segmentAudioFile(_ url: URL) async throws -> [URL] {
-        let duration = try await getAudioDuration(url: url)
-        var segments: [URL] = []
-        var start: Double = 0
-
-        while start < duration {
-            let end = min(start + segmentDuration, duration)
-            let segmentURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent("segment-\(UUID().uuidString.prefix(6)).m4a")
-
-            try await trimAudio(sourceURL: url, start: start, end: end, destinationURL: segmentURL)
-            segments.append(segmentURL)
-            start = end
-        }
-
-        return segments
-    }
-
-    func trimAudio(sourceURL: URL, start: Double, end: Double, destinationURL: URL) async throws {
-        let asset = AVAsset(url: sourceURL)
-        guard let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
-            throw NSError(domain: "AudioExport", code: -1, userInfo: [NSLocalizedDescriptionKey: "Unable to create exporter"])
-        }
-
-        exporter.outputURL = destinationURL
-        exporter.outputFileType = .m4a
-        exporter.timeRange = CMTimeRange(
-            start: CMTime(seconds: start, preferredTimescale: 600),
-            end: CMTime(seconds: end, preferredTimescale: 600)
-        )
-
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            exporter.exportAsynchronously {
-                if let error = exporter.error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume()
-                }
-            }
-        }
-
-    }
-
-    // MARK: - Utility
-
-    func getAudioDuration(url: URL) async throws -> Double {
+    
+    
+    private func reencodeTrimmedM4A(from url: URL, startOffset: Double, duration: Double) async throws -> URL {
         let asset = AVAsset(url: url)
-        return CMTimeGetSeconds(asset.duration)
-    }
-
-    private func reencodeToM4A(_ inputURL: URL) async throws -> URL {
-        let asset = AVAsset(url: inputURL)
         guard let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
             throw NSError(domain: "Reencode", code: -2, userInfo: [NSLocalizedDescriptionKey: "Failed to create export session."])
         }
-
+        
         let outputURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("cleaned-\(UUID().uuidString.prefix(6)).m4a")
-
+        
         exporter.outputURL = outputURL
         exporter.outputFileType = .m4a
-        exporter.timeRange = CMTimeRange(start: .zero, duration: asset.duration)
-
+        
+        let timescale: CMTimeScale = 600
+        exporter.timeRange = CMTimeRange(
+            start: CMTime(seconds: startOffset, preferredTimescale: timescale),
+            duration: CMTime(seconds: duration, preferredTimescale: timescale)
+        )
+        
         return try await withCheckedThrowingContinuation { continuation in
             exporter.exportAsynchronously {
                 if let error = exporter.error {
@@ -172,34 +129,134 @@ final class AudioRecorderService: NSObject, ObservableObject {
             }
         }
     }
-
+    @MainActor
+    func finalizeSegment() {
+        // Stop tap and engine cleanly
+        mixerNode?.removeTap(onBus: 0)
+        audioEngine?.stop()
+        audioEngine?.reset()
+        
+        let finishedCAFURL = recordingURL
+        recordingURL = nil
+        file = nil
+        
+        Task {
+            do {
+                try await Task.sleep(nanoseconds: 300_000_000)
+                
+                if let finishedCAFURL = finishedCAFURL {
+                    let duration = try await getAudioDuration(url: finishedCAFURL)
+                    if duration >= 1 {
+                        let cleanM4AURL = try await reencodeToM4A(finishedCAFURL)
+                        await MainActor.run {
+                            self.delegate?.didFinishSegment(cleanM4AURL)
+                        }
+                    } else {
+                        print("Discarded segment: too short")
+                    }
+                }
+                
+                try await self.startNewSegment()
+                
+            } catch {
+                print("finalizeSegment error: \(error)")
+                try? await MainActor.run { try self.startRecording() }
+            }
+        }
+    }
+    
+    
+    
+    
+    @MainActor
+    private func startNewSegment() throws {
+        let newURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("segment-\(UUID().uuidString.prefix(6)).caf")
+        
+        recordingURL = newURL
+        lastSegmentStartTime = Date()
+        
+        audioEngine = AVAudioEngine()
+        mixerNode = AVAudioMixerNode()
+        
+        let inputFormat = audioEngine.inputNode.outputFormat(forBus: 0)
+        audioEngine.attach(mixerNode)
+        audioEngine.connect(audioEngine.inputNode, to: mixerNode, format: inputFormat)
+        
+        file = try AVAudioFile(forWriting: newURL, settings: inputFormat.settings)
+        
+        try audioEngine.start()
+        
+        mixerNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, _ in
+            try? self?.file?.write(from: buffer)
+        }
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    // MARK: - Utility
+    
+    func getAudioDuration(url: URL) async throws -> Double {
+        let asset = AVAsset(url: url)
+        return CMTimeGetSeconds(asset.duration)
+    }
+    
+    private func reencodeToM4A(_ inputURL: URL) async throws -> URL {
+        let asset = AVAsset(url: inputURL)
+        guard let exporter = AVAssetExportSession(asset: asset, presetName: AVAssetExportPresetAppleM4A) else {
+            throw NSError(domain: "Reencode", code: -2, userInfo: [NSLocalizedDescriptionKey: "Failed to create export session."])
+        }
+        
+        let outputURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("cleaned-\(UUID().uuidString.prefix(6)).m4a")
+        
+        exporter.outputURL = outputURL
+        exporter.outputFileType = .m4a
+        exporter.timeRange = CMTimeRange(start: .zero, duration: asset.duration)
+        
+        return try await withCheckedThrowingContinuation { continuation in
+            exporter.exportAsynchronously {
+                if let error = exporter.error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: outputURL)
+                }
+            }
+        }
+    }
+    
     // MARK: - Audio Session
-
+    
     private func configureAudioSession() throws {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
         try session.setActive(true)
     }
-
+    
     // MARK: - Audio Route + Interruption
-
+    
     private func setupNotifications() {
         NotificationCenter.default.addObserver(self, selector: #selector(handleRouteChange), name: AVAudioSession.routeChangeNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(handleInterruption), name: AVAudioSession.interruptionNotification, object: nil)
     }
-
+    
     @objc private func handleRouteChange(notification: Notification) {
         guard let reasonValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
               let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue),
               reason == .oldDeviceUnavailable else { return }
-
+        
         print("Audio route changed (e.g. headphones unplugged)")
     }
-
-    @objc private func handleInterruption(notification: Notification) {
+    
+    @MainActor @objc private func handleInterruption(notification: Notification) {
         guard let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
               let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
-
+        
         if type == .began {
             print("Audio interruption began")
             stopRecording()

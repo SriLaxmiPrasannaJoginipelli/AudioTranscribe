@@ -50,12 +50,18 @@ struct RecordingView: View {
                         ZStack {
                             // Pulsing animation when recording
                             if viewModel.isRecording {
-                                Circle()
-                                    .fill(Color.red.opacity(0.2))
-                                    .frame(width: 300, height: 300)
-                                    .scaleEffect(viewModel.isRecording ? 1.5 : 0.5)
-                                    .opacity(viewModel.isRecording ? 0 : 0.5)
-                                    .animation(.easeInOut(duration: 2).repeatForever(autoreverses: false), value: viewModel.isRecording)
+                                VStack{
+                                    Circle()
+                                        .fill(Color.red.opacity(0.2))
+                                        .frame(width: 300, height: 300)
+                                        .scaleEffect(viewModel.isRecording ? 1.5 : 0.5)
+                                        .opacity(viewModel.isRecording ? 0 : 0.5)
+                                        .animation(.easeInOut(duration: 2).repeatForever(autoreverses: false), value: viewModel.isRecording)
+                                    
+                                    Text("Elapsed: \(formatTime(viewModel.recordingDuration))")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                }
                             }
                             
                             GlassCard {
@@ -171,6 +177,39 @@ struct RecordingView: View {
                 }
             }
         }
+        // Transcription feedback overlay
+        .overlay(
+            Group {
+                if let message = viewModel.transcriptionMessage {
+                    Text(message)
+                        .padding()
+                        .background(Color.green.opacity(0.8))
+                        .cornerRadius(12)
+                        .foregroundColor(.white)
+                        .shadow(radius: 5)
+                        .transition(.opacity)
+                        .padding(.top, 80)
+                } else if let error = viewModel.transcriptionError {
+                    Text(error)
+                        .padding()
+                        .background(Color.red.opacity(0.9))
+                        .cornerRadius(12)
+                        .foregroundColor(.white)
+                        .shadow(radius: 5)
+                        .transition(.opacity)
+                        .padding(.top, 80)
+                }
+            },
+            alignment: .top
+        )
+        .animation(.easeInOut(duration: 0.3), value: viewModel.transcriptionMessage ?? viewModel.transcriptionError)
+
+    }
+    
+    private func formatTime(_ interval: TimeInterval) -> String {
+        let minutes = Int(interval) / 60
+        let seconds = Int(interval) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
 
