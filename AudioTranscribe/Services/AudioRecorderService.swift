@@ -243,12 +243,6 @@ final class AudioRecorderService: NSObject, ObservableObject {
     }
     
     
-    
-    
-    
-    
-    
-    
     // MARK: - Utility
     
     func getAudioDuration(url: URL) async throws -> Double {

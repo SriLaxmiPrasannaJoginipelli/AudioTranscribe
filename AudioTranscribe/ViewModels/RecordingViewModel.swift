@@ -19,6 +19,7 @@ class RecordingViewModel: ObservableObject {
     private var timer: Timer?
     @Published var currentLevel: Float = -160.0
     @Published var showMicPermissionAlert: Bool = false
+    @Published var showDiskSpaceAlert = false
 
     
     static let supportedLanguages: [TranscriptionLanguage] = [
@@ -55,6 +56,12 @@ class RecordingViewModel: ObservableObject {
     func startRecording() {
         Task {
             do {
+                guard hasSufficientDiskSpace() else {
+                    print("Not enough disk space to record audio.")
+                    showDiskSpaceAlert = true
+                    return
+                }
+
                 let started = try await recorder.startRecording()
                 if started {
                     currentSession = RecordingSession(title: "Session \(Date().formatted(.dateTime.hour().minute()))")
@@ -107,6 +114,18 @@ class RecordingViewModel: ObservableObject {
         timer?.invalidate()
         timer = nil
     }
+    
+    // MARK : Disk Storage Check
+    func hasSufficientDiskSpace(thresholdInMB: Int = 50) -> Bool {
+        if let freeSpace = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory())[.systemFreeSize] as? NSNumber {
+            let freeSpaceMB = freeSpace.doubleValue / (1024 * 1024)
+            print("freeSpaceMB : \(freeSpaceMB)")
+            print("thresholdInMB: \(thresholdInMB)")
+            return freeSpaceMB > Double(thresholdInMB)
+        }
+        return false
+    }
+
 
 }
 

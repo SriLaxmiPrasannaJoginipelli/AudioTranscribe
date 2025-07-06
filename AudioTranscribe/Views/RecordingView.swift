@@ -178,6 +178,13 @@ struct RecordingView: View {
         } message: {
             Text("Please enable microphone access in Settings to use recording features.")
         }
+        .alert("Low Disk Space",
+               isPresented: $viewModel.showDiskSpaceAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("There isn’t enough free space to start recording. Please free up some storage and try again.")
+        }
+
 
     }
     
