@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>AudioTranscribe</string>
+
+    <key>CFBundleIdentifier</key>
+    <string>com.srilurao.AudioTranscribe</string>
+
+    <key>CFBundleVersion</key>
+    <string>1</string>
+
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+
+    <key>NSMicrophoneUsageDescription</key>
+    <string>This app records audio for transcription.</string>
+
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>audio</string>
+    </array>
+
+    <key>ASSEMBLY_API_KEY</key>
+    <string>32b828d35eb64681a33bf15644b4e9f6</string>
+</dict>
+</plist>
+
