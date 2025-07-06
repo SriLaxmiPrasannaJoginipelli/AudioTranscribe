@@ -29,6 +29,7 @@ final class AudioRecorderService: NSObject, ObservableObject {
     
     
     @Published var isRecording = false
+    @Published var showMicPermissionAlert = false
     weak var delegate: AudioRecorderDelegate?
     
     // MARK: - Lifecycle
@@ -41,7 +42,28 @@ final class AudioRecorderService: NSObject, ObservableObject {
     // MARK: - Recording Control
     
     @MainActor
-    func startRecording() throws {
+    func startRecording() async throws -> Bool {
+        let permission = AVAudioSession.sharedInstance().recordPermission
+        switch permission {
+        case .granted:
+            break // continue
+        case .denied:
+            print("Microphone permission denied.")
+            self.showMicPermissionAlert = true
+            return false
+        case .undetermined:
+            let granted = await withCheckedContinuation { continuation in
+                AVAudioSession.sharedInstance().requestRecordPermission { granted in
+                    continuation.resume(returning: granted)
+                }
+            }
+            
+            if !granted {
+                print("Microphone permission not granted by user.")
+                self.showMicPermissionAlert = true
+                return false
+            }
+        }
         stopRecording()
         recordingStartTime = Date()
         lastSegmentStartTime = Date()
@@ -49,7 +71,9 @@ final class AudioRecorderService: NSObject, ObservableObject {
         try startNewSegment()
         
         segmentTimer = Timer.scheduledTimer(withTimeInterval: segmentDuration, repeats: true) { [weak self] _ in
-            self?.finalizeSegment()
+            Task{
+                await self?.finalizeSegment()
+            }
         }
         
         try configureAudioSession()
@@ -57,6 +81,7 @@ final class AudioRecorderService: NSObject, ObservableObject {
         DispatchQueue.main.async {
             self.isRecording = true
         }
+        return true
     }
     
     
@@ -133,23 +158,22 @@ final class AudioRecorderService: NSObject, ObservableObject {
     }
     @MainActor
     func finalizeSegment() {
-        // Stop tap and engine cleanly
         mixerNode?.removeTap(onBus: 0)
         audioEngine?.stop()
         audioEngine?.reset()
-        
+
         let finishedCAFURL = recordingURL
         recordingURL = nil
         file = nil
-        
+
         Task {
             do {
                 try await Task.sleep(nanoseconds: 300_000_000)
-                
+
                 if let finishedCAFURL = finishedCAFURL {
-                    let duration = try await getAudioDuration(url: finishedCAFURL)
+                    let duration = try await self.getAudioDuration(url: finishedCAFURL)
                     if duration >= 1 {
-                        let cleanM4AURL = try await reencodeToM4A(finishedCAFURL)
+                        let cleanM4AURL = try await self.reencodeToM4A(finishedCAFURL)
                         await MainActor.run {
                             self.delegate?.didFinishSegment(cleanM4AURL)
                         }
@@ -157,17 +181,21 @@ final class AudioRecorderService: NSObject, ObservableObject {
                         print("Discarded segment: too short")
                     }
                 }
-                
-                try await self.startNewSegment()
-                
+
+                try await MainActor.run {
+                    try self.startNewSegment()
+                }
+
             } catch {
                 print("finalizeSegment error: \(error)")
-                try? await MainActor.run { try self.startRecording() }
+                Task {
+                    _ = try? await self.startRecording()
+                }
             }
+
         }
     }
-    
-    
+
     
     
     @MainActor
@@ -284,7 +312,9 @@ final class AudioRecorderService: NSObject, ObservableObject {
             stopRecording()
         } else {
             print("Audio interruption ended")
-            try? startRecording()
+            Task{
+                try? await startRecording()
+            }
         }
     }
 }

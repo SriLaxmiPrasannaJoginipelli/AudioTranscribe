@@ -17,7 +17,8 @@ class RecordingViewModel: ObservableObject {
     @Published var transcriptionError: String?
     @Published var recordingDuration: TimeInterval = 0
     private var timer: Timer?
-    @Published var currentLevel: Float = -160.0 
+    @Published var currentLevel: Float = -160.0
+    @Published var showMicPermissionAlert: Bool = false
 
     
     static let supportedLanguages: [TranscriptionLanguage] = [
@@ -41,6 +42,9 @@ class RecordingViewModel: ObservableObject {
     init(context: ModelContext) {
         self.context = context
         recorder.delegate = self
+        recorder.$showMicPermissionAlert
+                .receive(on: DispatchQueue.main)
+                .assign(to: &$showMicPermissionAlert)
     }
 
 
@@ -49,15 +53,20 @@ class RecordingViewModel: ObservableObject {
     }
 
     func startRecording() {
-        do {
-            try recorder.startRecording()
-            currentSession = RecordingSession(title: "Session \(Date().formatted(.dateTime.hour().minute()))")
-            context.insert(currentSession!)
-            isRecording = true
-            startTimer()
-        } catch {
-            print("⚠️ Failed to start: \(error)")
+        Task {
+            do {
+                let started = try await recorder.startRecording()
+                if started {
+                    currentSession = RecordingSession(title: "Session \(Date().formatted(.dateTime.hour().minute()))")
+                    context.insert(currentSession!)
+                    isRecording = true
+                    startTimer()
+                }
+            } catch {
+                print("Failed to start: \(error)")
+            }
         }
+
     }
 
     func stopRecording() {

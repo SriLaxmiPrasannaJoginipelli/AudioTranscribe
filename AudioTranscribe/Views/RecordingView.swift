@@ -172,6 +172,13 @@ struct RecordingView: View {
                           error: viewModel.transcriptionError)
         )
         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: viewModel.isRecording)
+        .alert("Microphone Access Denied",
+               isPresented: $viewModel.showMicPermissionAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Please enable microphone access in Settings to use recording features.")
+        }
+
     }
     
 }
