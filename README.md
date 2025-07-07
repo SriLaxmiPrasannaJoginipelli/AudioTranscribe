@@ -43,7 +43,7 @@ A SwiftUI iOS app for recording audio in 30-second segments with real-time trans
 
 ### Installation
 1. Clone the repository
-2. Add your OpenAI API key (`sk-xxxxxx`) from [platform.openai.com](https://platform.openai.com/api-keys)
+2. Add your OpenAI API key in `Secrets.plist`, Replace it with (`sk-xxxxxx`) from [platform.openai.com](https://platform.openai.com/api-keys)
 3. Build and run on a physical device
 
 ## 🏗️ Architecture
