@@ -21,6 +21,8 @@ A SwiftUI iOS app for recording audio in 30-second segments with real-time trans
 - 30-second audio segments with automatic re-encoding to `.m4a`
 - Real-time waveform visualization with dB power levels
 - Robust interruption handling for audio route changes
+  
+<img src="https://github.com/user-attachments/assets/e8fb4951-5f20-4284-bf97-be6b004d6777" width="300" alt="Recording Interface">
 
 ### 📝 Transcription
 - Dual-engine transcription (OpenAI Whisper API + Apple Speech fallback)
