@@ -8,6 +8,13 @@ A SwiftUI iOS app for recording audio in 30-second segments with real-time trans
 |---------------------|--------------|--------------------|
 | ![Recording](https://github.com/user-attachments/assets/ac0af343-0b61-43c6-8040-430bff5f7270) | ![79E0A382-E1A7-4BB0-A749-18A6F645685E_1_102_o](https://github.com/user-attachments/assets/41b75294-b28e-469f-9f99-f36de7f5af42) | ![75D20BB4-8DA5-4F5F-93F0-C8E20C0760C1_1_102_o](https://github.com/user-attachments/assets/f376ff30-799a-4fd1-9c2b-e9d798268e42) |
 
+----
+
+| Microphone Permission Alert | Audio Disconnected Alert| Diskstorage Alert |
+|---------------------|--------------|--------------------|
+| ![C8FF5BDF-BF00-445D-9C70-9ADC6FB74CD7_1_102_o](https://github.com/user-attachments/assets/5ece17f2-f310-4533-95a9-362e6892b957) | ![675279BF-E272-4AFD-82D2-B83766F159D2_1_102_o](https://github.com/user-attachments/assets/2df017ae-0efa-4112-bc78-d529885c8021) | ![75D20BB4-8DA5-4F5F-93F0-C8E20C0760C1_1_102_o](https://github.com/user-attachments/assets/f376ff30-799a-4fd1-9c2b-e9d798268e42) |
+
+
 ## ✨ Key Features
 
 ### 🎤 Recording
