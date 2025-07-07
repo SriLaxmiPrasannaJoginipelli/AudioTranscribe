@@ -27,6 +27,7 @@ final class AudioRecorderService: NSObject, ObservableObject {
     
     @Published var isRecording = false
     @Published var showMicPermissionAlert = false
+    @Published var showDeviceDisconnectedAlert = false
     weak var delegate: AudioRecorderDelegate?
     
     var isTesting = false
@@ -293,10 +294,47 @@ final class AudioRecorderService: NSObject, ObservableObject {
     
     @objc private func handleRouteChange(notification: Notification) {
         guard let reasonValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt,
-              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue),
-              reason == .oldDeviceUnavailable else { return }
+              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else { return }
         
-        print("Audio route changed (e.g. headphones unplugged)")
+        switch reason {
+        case .oldDeviceUnavailable:
+            // Get details about what was disconnected
+            if let previousRoute = notification.userInfo?[AVAudioSessionRouteChangePreviousRouteKey] as? AVAudioSessionRouteDescription {
+                let disconnectedInputs = previousRoute.inputs
+                let disconnectedOutputs = previousRoute.outputs
+                
+                // Check if it was an important audio device
+                let wasImportantDevice = disconnectedInputs.contains { input in
+                    input.portType == .bluetoothHFP ||
+                    input.portType == .headsetMic ||
+                    input.portType == .bluetoothA2DP
+                } || disconnectedOutputs.contains { output in
+                    output.portType == .bluetoothHFP ||
+                    output.portType == .headphones ||
+                    output.portType == .bluetoothA2DP
+                }
+                
+                if wasImportantDevice {
+                    print("Important audio device disconnected - stopping recording")
+                    stopRecording()
+                    
+                    DispatchQueue.main.async {
+                        self.showDeviceDisconnectedAlert = true
+                    }
+                }
+            }
+            
+        case .noSuitableRouteForCategory:
+            print("No suitable audio route available")
+            stopRecording()
+            
+            DispatchQueue.main.async {
+                self.showDeviceDisconnectedAlert = true
+            }
+            
+        default:
+            print("Audio route change: \(reason.rawValue)")
+        }
     }
     
     @MainActor @objc private func handleInterruption(notification: Notification) {

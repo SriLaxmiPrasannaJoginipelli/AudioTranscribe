@@ -20,6 +20,7 @@ class RecordingViewModel: ObservableObject {
     @Published var currentLevel: Float = -160.0
     @Published var showMicPermissionAlert: Bool = false
     @Published var showDiskSpaceAlert = false
+    @Published var showDeviceDisconnectedAlert: Bool = false
 
     
     static let supportedLanguages: [TranscriptionLanguage] = [
@@ -46,6 +47,9 @@ class RecordingViewModel: ObservableObject {
         recorder.$showMicPermissionAlert
                 .receive(on: DispatchQueue.main)
                 .assign(to: &$showMicPermissionAlert)
+        recorder.$showDeviceDisconnectedAlert
+                .receive(on: DispatchQueue.main)
+                .assign(to: &$showDeviceDisconnectedAlert)
     }
 
 
@@ -101,6 +105,18 @@ class RecordingViewModel: ObservableObject {
             }
         }
 
+    }
+    func handleDeviceDisconnection() {
+        // Stop recording if still active
+        if isRecording {
+            stopRecording()
+        }
+        
+        // Reset the alert flag
+        showDeviceDisconnectedAlert = false
+        
+        // Reset the recorder's alert flag
+        recorder.showDeviceDisconnectedAlert = false
     }
     
     private func startTimer() {

@@ -184,6 +184,18 @@ struct RecordingView: View {
         } message: {
             Text("There isn’t enough free space to start recording. Please free up some storage and try again.")
         }
+        .alert("Audio Device Disconnected", isPresented: $viewModel.showDeviceDisconnectedAlert) {
+                    Button("OK") {
+                        viewModel.handleDeviceDisconnection()
+                    }
+                    Button("Try Again") {
+                        viewModel.handleDeviceDisconnection()
+                        // Optionally restart recording
+                        viewModel.startRecording()
+                    }
+                } message: {
+                    Text("Your audio device (headphones, microphone, etc.) was disconnected. Recording has been stopped.")
+                }
 
 
     }
