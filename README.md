@@ -1,82 +1,64 @@
 # 🎙️ AudioTranscribe
 
-A SwiftUI iOS app for recording audio in 30-second segments with real-time transcription using OpenAI Whisper or Apple's native speech recognition. Features live waveform visualization and persistent storage with SwiftData.
+A SwiftUI iOS app for recording audio in 30-second segments with real-time transcription using OpenAI Whisper or Apple's native speech recognition.
 
-![E3C329A9-902D-4BCE-BA8C-8D9C6C94202F_1_102_o](https://github.com/user-attachments/assets/ac0af343-0b61-43c6-8040-430bff5f7270)
+## 📱 Screenshots
 
-## Features
+| Recording Interface | Session List | Transcription View |
+|---------------------|--------------|--------------------|
+| ![Recording](https://github.com/user-attachments/assets/ac0af343-0b61-43c6-8040-430bff5f7270) | ![Sessions](https://github.com/user-attachments/assets/9e992338-dc62-4265-8368-ee918232dfe5) | ![Transcription](https://github.com/user-attachments/assets/5d4daf39-f878-4ca1-9fdd-972eaa9370e4) |
 
-- **Smart Recording**: 30-second audio segments with automatic re-encoding to `.m4a`
-- **Dual Transcription**: OpenAI Whisper API with Apple Speech fallback after 5 failures
-- **Live Visualization**: Real-time waveform rendering with dB power levels
-- **Persistent Storage**: SwiftData for sessions and segments with indexed relationships
-- **Supports Different Languages**: User can select the language they wanna transcribe to from the list available.
-- **Advanced Search**: Filter by date
-- **Robust Interruption Handling**: Graceful audio route changes, device disconnections, and app interruptions
-- **Permission Management**: Comprehensive microphone permission handling
+## ✨ Key Features
 
-![C8FF5BDF-BF00-445D-9C70-9ADC6FB74CD7_1_102_o](https://github.com/user-attachments/assets/9e992338-dc62-4265-8368-ee918232dfe5)
+### 🎤 Recording
+- 30-second audio segments with automatic re-encoding to `.m4a`
+- Real-time waveform visualization with dB power levels
+- Robust interruption handling for audio route changes
 
-![675279BF-E272-4AFD-82D2-B83766F159D2_1_102_o](https://github.com/user-attachments/assets/5d4daf39-f878-4ca1-9fdd-972eaa9370e4)
+### 📝 Transcription
+- Dual-engine transcription (OpenAI Whisper API + Apple Speech fallback)
+- Smart retry mechanism with exponential backoff
+- Multi-language support with user-selectable options
 
-## Quick Start
+### 💾 Data Management
+- Persistent storage with SwiftData
+- Indexed relationships for performance
+- Advanced search by date/time
+
+## 🚀 Quick Start
 
 ### Requirements
-- iOS 18.5
+- iOS 18.5+
 - Xcode 15+
 - Physical device (microphone required)
 
-### Setup
+### Installation
 1. Clone the repository
-2. Replace `sk-xxxxxx` with your actual OpenAI API key from [platform.openai.com](https://platform.openai.com/api-keys)
-4. Build and run on a physical device
+2. Add your OpenAI API key (`sk-xxxxxx`) from [platform.openai.com](https://platform.openai.com/api-keys)
+3. Build and run on a physical device
 
-## Architecture
+## 🏗️ Architecture
 
-### Clean MVVM + Service-Oriented Design
+### MVVM + Service Layer
+- **ViewModels**: `@MainActor` annotated for thread safety
+- **Services**:
+  - `AudioRecorderService`: Handles audio recording
+  - `TranscriptionService`: Manages transcription logic
+  - `TranscriptionQueue`: Coordinates ordered execution
 
-The app is built using a modular **MVVM architecture** with clean separation of concerns:
+### Core Technologies
+- `AVAudioEngine` for real-time audio processing
+- Swift Concurrency with `Task` and `@MainActor`
+- SwiftData for persistence
 
-- **RecordingViewModel**: Controls state and UI logic with `@MainActor` annotations
-- **AudioRecorderService**: Handles audio recording, segmentation, and interruptions
-- **TranscriptionService**: Manages transcription logic with retry/fallback flow
-- **TranscriptionQueue**: Coordinates ordered, concurrent-safe transcription execution
-- **SwiftData Models**: Persist sessions, segments, and transcriptions
+## 🔧 Technical Highlights
 
-**Concurrency** is handled with `Task`, `MainActor`, and `@MainActor` annotations to ensure thread safety. Audio-related operations run in background threads, with UI updates dispatched to the main thread.
-
-### Key Technologies
-- `AVAudioEngine` + `AVAudioMixerNode` for real-time audio processing and metering
-- `Task` and `@MainActor` for Swift Concurrency
+### Audio System
+- 30-second `.caf` segments converted to `.m4a`
 - Duplicate detection
-- Indexed SwiftData relationships for performance optimization
+- Handles 1000+ sessions and 10,000+ segments
 
-## Audio System Design
-
-### Recording Approach
-
-- Uses `AVAudioEngine` + `AVAudioMixerNode` for real-time audio processing and metering
-- Audio is recorded in 30-second `.caf` segments and re-encoded to `.m4a` format asynchronously
-- Duplicate detection is implemented
-- Support for 1000+ sessions and 10,000+ segments with lazy loading
-
-### Audio Route & Interruptions
-
-- Listens to `AVAudioSession.routeChangeNotification` and `interruptionNotification`
-- **Device Disconnection Handling**: Bluetooth headsets, wired headphones, external microphones
-- **Microphone Permission Management**: Complete permission flow with user alerts
-- On headset/mic disconnection:
-  - Gracefully stops current segment
-  - Alerts the user with contextual messages
-  - Automatically restarts recording when device reconnects
-
-![675279BF-E272-4AFD-82D2-B83766F159D2_1_102_o](https://github.com/user-attachments/assets/d23359b1-7169-4615-875f-5cfa2637142a)
-
-![E5E87EDE-C986-4626-B49D-6F3F82217CDF_1_102_o](https://github.com/user-attachments/assets/b70ae8f1-0288-4dba-b555-f06904ba5c0d)
-
-## Transcription System
-
-### Robust Retry & Fallback Mechanism
+### Transcription Flow
 
 The app implements a sophisticated transcription system with exponential backoff:
 
@@ -123,8 +105,6 @@ TranscriptionSegment
 - Lazy loading and relationships (`@Relationship`)
 - Background context for heavy operations
 - Efficient memory management for large datasets
-
-![Data Model Diagram](docs/data-model.png)
 
 ## Testing Coverage
 
