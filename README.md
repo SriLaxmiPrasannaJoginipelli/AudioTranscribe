@@ -79,11 +79,19 @@ OpenAI Whisper API Attempts:
 └── Apple Speech Recognition (Fallback)
 ```
 
-### Language Support
-- **Primary**: English (en) - ReadMe selected language
-- **API Configuration**: Configurable language settings in TranscriptionService
+## Language Support
 
-![81F655EF-0B34-4F68-AFB4-4B364E88D3F2_1_102_o](https://github.com/user-attachments/assets/bb0707f7-ffd4-4522-9e28-ba42528f838e)
+### Supported Features
+- **Primary Language**: English (en) - Default selection
+- **Multi-language Support**: Configurable via TranscriptionService
+- **User Selection**: Choose from available languages in settings
+
+<img src="https://github.com/user-attachments/assets/bb0707f7-ffd4-4522-9e28-ba42528f838e" width="300" alt="Language selection interface">
+
+### Implementation Details
+- Dynamic language switching during recording sessions
+- Locale-aware transcription processing
+- Fallback to device language when unspecified
 
 ## Data Model
 
