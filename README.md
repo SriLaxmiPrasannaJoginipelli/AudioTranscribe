@@ -2,7 +2,7 @@
 
 A SwiftUI iOS app for recording audio in 30-second segments with real-time transcription using OpenAI Whisper or Apple's native speech recognition.
 
-## 📱 Screenshots
+##  Screenshots
 
 | Recording Interface | Session List | Transcription View |
 |---------------------|--------------|--------------------|
@@ -15,26 +15,26 @@ A SwiftUI iOS app for recording audio in 30-second segments with real-time trans
 | ![C8FF5BDF-BF00-445D-9C70-9ADC6FB74CD7_1_102_o](https://github.com/user-attachments/assets/5ece17f2-f310-4533-95a9-362e6892b957) | ![675279BF-E272-4AFD-82D2-B83766F159D2_1_102_o](https://github.com/user-attachments/assets/2df017ae-0efa-4112-bc78-d529885c8021) | ![2C73AD88-CBDC-4A60-9566-42BAF7707118_1_102_o](https://github.com/user-attachments/assets/9c68c6ca-007b-42e0-8712-be20e96ab4fb) |
 
 
-## ✨ Key Features
+## Key Features
 
-### 🎤 Recording
+### Recording
 - 30-second audio segments with automatic re-encoding to `.m4a`
 - Real-time waveform visualization with dB power levels
 - Robust interruption handling for audio route changes
   
 <img src="https://github.com/user-attachments/assets/e8fb4951-5f20-4284-bf97-be6b004d6777" width="300" alt="Recording Interface">
 
-### 📝 Transcription
+### Transcription
 - Dual-engine transcription (OpenAI Whisper API + Apple Speech fallback)
 - Smart retry mechanism with exponential backoff
 - Multi-language support with user-selectable options
 
-### 💾 Data Management
+### Data Management
 - Persistent storage with SwiftData
 - Indexed relationships for performance
 - Advanced search by date/time
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Requirements
 - iOS 18.5+
@@ -52,7 +52,7 @@ A SwiftUI iOS app for recording audio in 30-second segments with real-time trans
    - Verify Bundle Identifier matches your provisioning profile
 6. Build and run on a physical device
 
-## 🏗️ Architecture
+## Architecture
 
 ### MVVM + Service Layer
 - **ViewModels**: `@MainActor` annotated for thread safety
@@ -66,7 +66,7 @@ A SwiftUI iOS app for recording audio in 30-second segments with real-time trans
 - Swift Concurrency with `Task` and `@MainActor`
 - SwiftData for persistence
 
-## 🔧 Technical Highlights
+## Technical Highlights
 
 ### Audio System
 - 30-second `.caf` segments converted to `.m4a`
