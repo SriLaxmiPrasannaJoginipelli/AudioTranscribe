@@ -50,8 +50,7 @@ A SwiftUI iOS app for recording audio in 30-second segments with real-time trans
    - Check "Automatically manage signing"
    - Select your Development Team
    - Verify Bundle Identifier matches your provisioning profile
-6. Add required capabilities
-7. Build and run on a physical device
+6. Build and run on a physical device
 
 ## 🏗️ Architecture
 
