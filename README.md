@@ -6,8 +6,7 @@ A SwiftUI iOS app for recording audio in 30-second segments with real-time trans
 
 | Recording Interface | Session List | Transcription View |
 |---------------------|--------------|--------------------|
-| ![Recording](https://github.com/user-attachments/assets/ac0af343-0b61-43c6-8040-430bff5f7270) | ![79E0A382-E1A7-4BB0-A749-18A6F645685E_1_102_o](https://github.com/user-attachments/assets/41b75294-b28e-469f-9f99-f36de7f5af42)
- | ![75D20BB4-8DA5-4F5F-93F0-C8E20C0760C1_1_102_o](https://github.com/user-attachments/assets/f376ff30-799a-4fd1-9c2b-e9d798268e42) |
+| ![Recording](https://github.com/user-attachments/assets/ac0af343-0b61-43c6-8040-430bff5f7270) | ![79E0A382-E1A7-4BB0-A749-18A6F645685E_1_102_o](https://github.com/user-attachments/assets/41b75294-b28e-469f-9f99-f36de7f5af42) | ![75D20BB4-8DA5-4F5F-93F0-C8E20C0760C1_1_102_o](https://github.com/user-attachments/assets/f376ff30-799a-4fd1-9c2b-e9d798268e42) |
 
 ## ✨ Key Features
 
