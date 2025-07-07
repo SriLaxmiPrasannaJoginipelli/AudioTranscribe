@@ -44,7 +44,14 @@ A SwiftUI iOS app for recording audio in 30-second segments with real-time trans
 ### Installation
 1. Clone the repository
 2. Add your OpenAI API key in `Secrets.plist`, Replace it with (`sk-xxxxxx`) from [platform.openai.com](https://platform.openai.com/api-keys)
-3. Build and run on a physical device
+3. Select "AudioTranscribe" target in project navigator.
+4. Go to "Signing & Capabilities" tab.
+5. Under "Signing":
+   - Check "Automatically manage signing"
+   - Select your Development Team
+   - Verify Bundle Identifier matches your provisioning profile
+6. Add required capabilities
+7. Build and run on a physical device
 
 ## 🏗️ Architecture
 
